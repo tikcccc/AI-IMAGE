@@ -54,7 +54,7 @@ function getUserFacingErrorMessage(
   const normalizedErrorText = [code, message, detail, nestedMessage, rawBody].join(" ").toLowerCase();
 
   if (USAGE_LIMIT_ERROR_PATTERN.test(normalizedErrorText)) {
-    return "Usage limit reached. Please try again later.";
+    return "Usage limit reached.";
   }
 
   switch (code) {
