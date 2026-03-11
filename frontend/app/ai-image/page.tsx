@@ -418,11 +418,18 @@ export default function HomePage() {
               label: "Waiting for input",
           };
 
+  const guestUsageLimit = account?.role === "guest" ? account.usage_limit ?? 100 : null;
+  const guestUsageCount = account?.role === "guest" ? account.usage_count : null;
+  const guestUsageProgress =
+    guestUsageCount !== null && guestUsageLimit
+      ? Math.min(100, Math.max(0, (guestUsageCount / guestUsageLimit) * 100))
+      : 0;
+
   const accountSummary = isLoadingAccount
     ? "Checking account"
     : account
       ? account.role === "guest"
-        ? `${account.username} · ${account.usage_count}/${account.usage_limit ?? 100} used`
+        ? `${account.username} · guest access`
         : `${account.username} · unlimited access`
       : accountError || "Account unavailable";
 
@@ -448,6 +455,26 @@ export default function HomePage() {
             <div className="account-card">
               <p className="account-title">{accountSummary}</p>
               <p className="account-copy">{accountCaption}</p>
+              {account?.role === "guest" && guestUsageCount !== null && guestUsageLimit ? (
+                <div className={`account-usage-block${account.is_limited ? " is-limited" : ""}`}>
+                  <div className="account-usage-meta">
+                    <span>Usage</span>
+                    <strong>
+                      {guestUsageCount}/{guestUsageLimit}
+                    </strong>
+                  </div>
+                  <div
+                    className="usage-progress-track"
+                    role="progressbar"
+                    aria-label="Guest usage"
+                    aria-valuemin={0}
+                    aria-valuemax={guestUsageLimit}
+                    aria-valuenow={guestUsageCount}
+                  >
+                    <span className="usage-progress-fill" style={{ width: `${guestUsageProgress}%` }} />
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className={`status-pill status-${status.tone}`}>{status.label}</div>
