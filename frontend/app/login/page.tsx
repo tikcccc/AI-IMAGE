@@ -15,21 +15,6 @@ type LoginErrorResponse = {
   code: string;
 };
 
-const authHighlights = [
-  {
-    title: "Protected workspace",
-    description: "Access the image-processing console from a dedicated authenticated session.",
-  },
-  {
-    title: "Preset credentials",
-    description: "This project uses managed usernames and passwords without a separate sign-up flow.",
-  },
-  {
-    title: "Direct handoff",
-    description: "After sign-in you are redirected straight to the main AI image workspace.",
-  },
-] as const;
-
 function getDisplayMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message === "Failed to fetch"
@@ -89,53 +74,20 @@ export default function LoginPage() {
   return (
     <main className="auth-shell">
       <section className="auth-panel">
-        <div className="auth-copy">
-          <div className="brand-block auth-brand">
-            <span className="brand-mark">IS</span>
-            <div>
-              <p className="brand-name">ISBIM AI</p>
-              <p className="brand-caption">Image processing workspace</p>
-            </div>
-          </div>
-
-          <div className="auth-copy-main">
-            <p className="auth-kicker">Secure Access</p>
-            <h1>Sign in to the AI image workspace</h1>
-            <p>
-              Enter the protected workflow for uploading source images, writing transformation
-              prompts, and reviewing generated output from the same controlled session.
-            </p>
-          </div>
-
-          <div className="auth-badge-row">
-            <span className="status-pill status-working">Private environment</span>
-            <span className="auth-chip">Single account flow</span>
-          </div>
-
-          <div className="auth-highlight-grid">
-            {authHighlights.map((item) => (
-              <article className="auth-highlight-card" key={item.title}>
-                <p className="auth-highlight-title">{item.title}</p>
-                <p className="auth-highlight-copy">{item.description}</p>
-              </article>
-            ))}
-          </div>
-
-          <div className="auth-side-note">
-            <p className="auth-side-note-title">Session handoff</p>
-            <p className="auth-side-note-copy">
-              The sign-in page and the main workspace run on separate subdomains under the same
-              root domain, then exchange access through the project session token.
-            </p>
+        <div className="brand-block auth-brand">
+          <span className="brand-mark">IS</span>
+          <div>
+            <p className="brand-name">ISBIM AI</p>
+            <p className="brand-caption">Image processing workspace</p>
           </div>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
-          <div className="auth-form-head">
-            <p className="auth-form-kicker">Workspace Login</p>
-            <h2 className="auth-form-title">Use your assigned credentials</h2>
-            <p className="auth-form-copy">
-              Sign in with the preset username and password configured for this environment.
+          <div className="auth-copy">
+            <p className="auth-eyebrow">Login</p>
+            <h1 className="auth-title">Sign in</h1>
+            <p className="auth-copy-text">
+              Use your assigned username and password to enter the AI image workspace.
             </p>
           </div>
 
@@ -172,9 +124,7 @@ export default function LoginPage() {
             <button className="submit-button auth-submit" type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Signing in..." : "Sign in"}
             </button>
-            <p className="auth-submit-copy">
-              You will be redirected to the main workspace immediately after authentication.
-            </p>
+            <p className="auth-submit-copy">You will be redirected to the main workspace after login.</p>
           </div>
         </form>
       </section>
