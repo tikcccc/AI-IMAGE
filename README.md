@@ -70,6 +70,38 @@ API_BASE_URL=http://localhost:8001
 
 注意：目前 backend 只支援同步的 OpenAI-compatible `chat/completions` 介面。已實測可用的組合是 `PROXY_URL=https://api.vectorengine.ai/v1/chat/completions` 搭配 `MODEL_NAME=gemini-3.1-flash-image-preview`。如果你要改接向量引擎文件中的 `fal-ai/nano-banana/edit` 這類非同步任務 API，還需要另外實作 `request_id` 輪詢，不能直接沿用現在這個 adapter。
 
+## Coolify 部署 Backend
+
+這個 repo 是 monorepo。若你只要部署 FastAPI backend，在 Coolify 建 Application 時請這樣填：
+
+- Repository URL: 你的 repo URL
+- Branch: `main`
+- Build Pack: `Nixpacks`
+- Base Directory: `/backend`
+- Port: `8001`
+- Is it a static site: 不勾選
+
+這個 repo 已經包含給 Coolify 用的設定檔：
+
+- `backend/nixpacks.toml`
+- `backend/.python-version`
+
+部署後到 Environment Variables 補這些值：
+
+```bash
+PROXY_API_KEY=你的向量引擎 key
+PROXY_URL=https://api.vectorengine.ai/v1/chat/completions
+MODEL_NAME=gemini-3.1-flash-image-preview
+CORS_ORIGINS=https://你的前端網域
+REQUEST_TIMEOUT_SECONDS=60
+```
+
+注意：
+
+- `CORS_ORIGINS` 不要再填 `localhost`，要改成你實際前端站點的 `https://...`
+- Coolify 的 Base Directory 一定要是 `/backend`，不要填 repo 根目錄
+- 如果 frontend 也部署在 Coolify，frontend 的 `API_BASE_URL` 要指向這個 backend 的公開網址
+
 ## API Contract
 
 請求：

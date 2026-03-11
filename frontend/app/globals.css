@@ -356,10 +356,18 @@ img {
 .preview-frame,
 .result-frame {
   overflow: hidden;
+  position: relative;
 }
 
 .source-frame {
   min-height: 500px;
+}
+
+.preview-frame.is-drag-active {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 4px rgba(37, 99, 235, 0.12),
+    inset 0 0 0 1px rgba(37, 99, 235, 0.18);
 }
 
 .preview-image,
@@ -382,6 +390,36 @@ img {
   text-align: center;
 }
 
+.drop-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  background: rgba(239, 246, 255, 0.9);
+  backdrop-filter: blur(3px);
+  text-align: center;
+}
+
+.drop-overlay-title,
+.drop-overlay-copy {
+  margin: 0;
+}
+
+.drop-overlay-title {
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+
+.drop-overlay-copy {
+  max-width: 320px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .empty-title,
 .loading-title {
   font-size: 1.04rem;
@@ -395,9 +433,7 @@ img {
   line-height: 1.7;
 }
 
-.file-summary,
-.result-summary-card,
-.info-item {
+.file-summary {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -525,13 +561,7 @@ img {
   cursor: not-allowed;
 }
 
-.link-button {
-  min-width: 140px;
-}
-
-.message-box,
-.result-summary-card,
-.info-list {
+.message-box {
   border-radius: var(--radius-md);
 }
 
@@ -563,14 +593,6 @@ img {
   gap: 16px;
 }
 
-.result-summary-card {
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  background: var(--surface-muted);
-  display: grid;
-  gap: 14px;
-}
-
 .spinner {
   width: 34px;
   height: 34px;
@@ -580,32 +602,6 @@ img {
   animation: spin 0.8s linear infinite;
 }
 
-.info-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  padding: 18px;
-  border: 1px solid var(--border);
-  background: var(--surface-muted);
-}
-
-.info-item {
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 6px 0;
-}
-
-.info-label {
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.info-value {
-  font-size: 0.92rem;
-  font-weight: 700;
-  text-align: left;
-}
-
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -613,8 +609,7 @@ img {
 }
 
 @media (max-width: 1024px) {
-  .request-composer,
-  .info-list {
+  .request-composer {
     grid-template-columns: 1fr;
   }
 }
@@ -632,9 +627,7 @@ img {
 
   .product-header,
   .panel-header,
-  .file-summary,
-  .info-item,
-  .result-summary-card {
+  .file-summary {
     flex-direction: column;
   }
 

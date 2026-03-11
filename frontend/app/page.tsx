@@ -107,7 +107,7 @@ export default function HomePage() {
     applySelectedFile(event.target.files?.[0] ?? null);
   }
 
-  function handleDragEnter(event: DragEvent<HTMLLabelElement>) {
+  function handleDragEnter(event: DragEvent<HTMLElement>) {
     event.preventDefault();
     event.stopPropagation();
 
@@ -119,7 +119,7 @@ export default function HomePage() {
     setIsDragActive(true);
   }
 
-  function handleDragOver(event: DragEvent<HTMLLabelElement>) {
+  function handleDragOver(event: DragEvent<HTMLElement>) {
     event.preventDefault();
     event.stopPropagation();
 
@@ -131,7 +131,7 @@ export default function HomePage() {
     setIsDragActive(true);
   }
 
-  function handleDragLeave(event: DragEvent<HTMLLabelElement>) {
+  function handleDragLeave(event: DragEvent<HTMLElement>) {
     event.preventDefault();
     event.stopPropagation();
 
@@ -145,7 +145,7 @@ export default function HomePage() {
     }
   }
 
-  function handleDrop(event: DragEvent<HTMLLabelElement>) {
+  function handleDrop(event: DragEvent<HTMLElement>) {
     event.preventDefault();
     event.stopPropagation();
 
@@ -356,7 +356,13 @@ export default function HomePage() {
                   </div>
                 </label>
 
-                <div className="preview-frame source-frame">
+                <div
+                  className={`preview-frame source-frame${isDragActive ? " is-drag-active" : ""}`}
+                  onDragEnter={handleDragEnter}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
                   {previewUrl ? (
                     <img className="preview-image" src={previewUrl} alt="Selected source preview" />
                   ) : (
@@ -367,6 +373,13 @@ export default function HomePage() {
                       </p>
                     </div>
                   )}
+
+                  {isDragActive ? (
+                    <div className="drop-overlay" aria-hidden="true">
+                      <p className="drop-overlay-title">Drop image here</p>
+                      <p className="drop-overlay-copy">Release to upload and replace the current preview.</p>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="file-summary">
@@ -424,7 +437,7 @@ export default function HomePage() {
                   >
                     {errorMessage
                       ? errorMessage
-                      : "Result ready. Review it below, open it in a new tab, or download it directly."}
+                      : "Result ready. Review it below or download it directly."}
                   </div>
                 ) : null}
               </div>
@@ -462,36 +475,13 @@ export default function HomePage() {
                 </div>
 
                 <div className="result-actions">
-                  <a
-                    className="submit-button link-button"
-                    href={resultImage}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Open result
-                  </a>
                   <button
-                    className="secondary-button"
+                    className="submit-button"
                     type="button"
                     onClick={handleDownloadResult}
                   >
                     Download image
                   </button>
-                </div>
-
-                <div className="result-summary-card">
-                  <div>
-                    <p className="summary-label">Delivery format</p>
-                    <p className="summary-value">
-                      {resultImage.startsWith("data:image/")
-                        ? "Inline image returned from the provider"
-                        : "Remote image link returned from the provider"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="summary-label">Suggested file name</p>
-                    <p className="summary-value">{getDownloadFilename()}</p>
-                  </div>
                 </div>
               </div>
             ) : (
@@ -506,21 +496,6 @@ export default function HomePage() {
                 </p>
               </div>
             )}
-
-            <div className="info-list">
-              <div className="info-item">
-                <span className="info-label">Input requirements</span>
-                <span className="info-value">1 image, up to 5 MB</span>
-              </div>
-              <div className="info-item">
-                <span className="info-label">Accepted formats</span>
-                <span className="info-value">JPG, PNG, WEBP</span>
-              </div>
-              <div className="info-item">
-                <span className="info-label">Delivery</span>
-                <span className="info-value">Preview + open + download</span>
-              </div>
-            </div>
           </section>
         </form>
       </div>

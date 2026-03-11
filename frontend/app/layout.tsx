@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Vector Engine Studio",
+  title: "ISBIM AI",
   description: "Upload one image, describe the edit, and review the processed result.",
 };
 
