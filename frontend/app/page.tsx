@@ -52,6 +52,24 @@ function getFileTypeLabel(file: File): string {
   return normalizedType;
 }
 
+function getServerErrorMessage(errorPayload: ApiErrorResponse | null): string {
+  if (!errorPayload?.message.trim()) {
+    return "Could not generate the result. Please try again.";
+  }
+
+  return errorPayload.message;
+}
+
+function getDisplayErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message === "Failed to fetch"
+      ? "The service is temporarily unavailable. Please try again later."
+      : error.message;
+  }
+
+  return "Could not generate the result. Please try again.";
+}
+
 export default function HomePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dragDepthRef = useRef(0);
@@ -252,16 +270,12 @@ export default function HomePage() {
 
       if (!response.ok || payload?.status !== "success") {
         const errorPayload = payload as ApiErrorResponse | null;
-        const errorCode = errorPayload?.code ? ` Error code: ${errorPayload.code}.` : "";
-        const providerMessage = errorPayload?.message ? ` ${errorPayload.message}` : "";
-        throw new Error(`Image processing failed. Please try again.${providerMessage}${errorCode}`);
+        throw new Error(getServerErrorMessage(errorPayload));
       }
 
       setResultImage(payload.data.result_image);
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Something went wrong. Please try again.",
-      );
+      setErrorMessage(getDisplayErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -464,7 +478,7 @@ export default function HomePage() {
                   <p className="loading-title">Processing your image</p>
                   <p className="loading-copy">
                     The image and prompt are being submitted. The result will appear here as soon
-                    as the API responds.
+                    as it is ready.
                   </p>
                 </div>
               </div>
