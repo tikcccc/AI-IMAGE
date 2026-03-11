@@ -5,7 +5,15 @@ const API_BASE_URL =
     /\/$/,
     "",
   );
-const USAGE_LIMIT_ERROR_PATTERN = /\b(insufficient|quota|credit|balance|exhausted)\b/i;
+const USAGE_LIMIT_ERROR_PATTERNS = [
+  /\binsufficient_quota\b/i,
+  /\bbilling[_\s-]?hard[_\s-]?limit[_\s-]?reached\b/i,
+  /\bquota(?:\s+has\s+been)?\s+exceeded\b/i,
+  /\bout of credits?\b/i,
+  /\bno remaining (?:credits?|balance)\b/i,
+  /\binsufficient (?:credits?|balance)\b/i,
+  /\busage limit reached\b/i,
+];
 
 export const runtime = "nodejs";
 
@@ -42,6 +50,22 @@ function getNestedErrorMessage(error: unknown): string {
   return isNonEmptyString(nestedMessage) ? nestedMessage : "";
 }
 
+function getNestedErrorCode(error: unknown): string {
+  if (!error || typeof error !== "object") {
+    return "";
+  }
+
+  const nestedCode = (error as { code?: unknown }).code;
+  return isNonEmptyString(nestedCode) ? nestedCode : "";
+}
+
+function isUsageLimitError(parts: string[]): boolean {
+  const normalizedParts = parts.filter(Boolean);
+  return USAGE_LIMIT_ERROR_PATTERNS.some((pattern) =>
+    normalizedParts.some((part) => pattern.test(part)),
+  );
+}
+
 function getUserFacingErrorMessage(
   payload: UpstreamErrorPayload | null,
   rawBody: string,
@@ -51,9 +75,9 @@ function getUserFacingErrorMessage(
   const message = isNonEmptyString(payload?.message) ? payload.message : "";
   const detail = isNonEmptyString(payload?.detail) ? payload.detail : "";
   const nestedMessage = getNestedErrorMessage(payload?.error);
-  const normalizedErrorText = [code, message, detail, nestedMessage, rawBody].join(" ").toLowerCase();
+  const nestedCode = getNestedErrorCode(payload?.error);
 
-  if (USAGE_LIMIT_ERROR_PATTERN.test(normalizedErrorText)) {
+  if (isUsageLimitError([code, message, detail, nestedCode, nestedMessage, rawBody])) {
     return "Usage limit reached.";
   }
 
