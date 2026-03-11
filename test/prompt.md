@@ -1,0 +1,1 @@
+create a 2D layout plan architecture style drawing from this floor plan. use modern design and suitable for 1-2 person living.

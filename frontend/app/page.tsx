@@ -1,0 +1,529 @@
+"use client";
+
+import { ChangeEvent, DragEvent, FormEvent, useEffect, useRef, useState } from "react";
+
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+
+type ApiSuccessResponse = {
+  status: "success";
+  data: {
+    result_image: string;
+  };
+};
+
+type ApiErrorResponse = {
+  status: "error";
+  message: string;
+  code: string;
+};
+
+function validateImageFile(file: File | null): string | null {
+  if (!file) {
+    return "Select an image before submitting.";
+  }
+
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    return "Only JPG, PNG, and WEBP images are supported.";
+  }
+
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    return "The selected image must be smaller than 5 MB.";
+  }
+
+  return null;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+function getFileTypeLabel(file: File): string {
+  const normalizedType = file.type.replace("image/", "").toUpperCase();
+
+  if (normalizedType === "JPEG") {
+    return "JPG";
+  }
+
+  return normalizedType;
+}
+
+export default function HomePage() {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const dragDepthRef = useRef(0);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [prompt, setPrompt] = useState<string>("");
+  const [resultImage, setResultImage] = useState<string>("");
+  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isDragActive, setIsDragActive] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!selectedFile) {
+      setPreviewUrl("");
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedFile);
+    setPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [selectedFile]);
+
+  function resetFileInput() {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  function clearTransientState() {
+    setResultImage("");
+    setErrorMessage("");
+  }
+
+  function applySelectedFile(file: File | null) {
+    const validationError = validateImageFile(file);
+
+    if (validationError) {
+      setSelectedFile(null);
+      clearTransientState();
+      setErrorMessage(validationError);
+      resetFileInput();
+      return;
+    }
+
+    setSelectedFile(file);
+    clearTransientState();
+  }
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    applySelectedFile(event.target.files?.[0] ?? null);
+  }
+
+  function handleDragEnter(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (isSubmitting) {
+      return;
+    }
+
+    dragDepthRef.current += 1;
+    setIsDragActive(true);
+  }
+
+  function handleDragOver(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (isSubmitting) {
+      return;
+    }
+
+    event.dataTransfer.dropEffect = "copy";
+    setIsDragActive(true);
+  }
+
+  function handleDragLeave(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (isSubmitting) {
+      return;
+    }
+
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) {
+      setIsDragActive(false);
+    }
+  }
+
+  function handleDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    dragDepthRef.current = 0;
+    setIsDragActive(false);
+
+    if (isSubmitting) {
+      return;
+    }
+
+    applySelectedFile(event.dataTransfer.files?.[0] ?? null);
+  }
+
+  function handlePromptChange(event: ChangeEvent<HTMLTextAreaElement>) {
+    setPrompt(event.target.value);
+
+    if (errorMessage) {
+      setErrorMessage("");
+    }
+  }
+
+  function handleRemoveFile() {
+    setSelectedFile(null);
+    clearTransientState();
+    setIsDragActive(false);
+    resetFileInput();
+  }
+
+  function handleResetWorkspace() {
+    setSelectedFile(null);
+    setPrompt("");
+    setPreviewUrl("");
+    clearTransientState();
+    setIsDragActive(false);
+    dragDepthRef.current = 0;
+    resetFileInput();
+  }
+
+  function getDownloadFilename() {
+    if (!selectedFile) {
+      return "processed-image.png";
+    }
+
+    const mimeType = resultImage.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,/)?.[1] ?? selectedFile.type;
+    const extension = mimeType.split("/")[1]?.replace("jpeg", "jpg") || "png";
+    const originalName = selectedFile.name.replace(/\.[^.]+$/, "");
+
+    return `${originalName}-processed.${extension}`;
+  }
+
+  async function handleDownloadResult() {
+    if (!resultImage) {
+      return;
+    }
+
+    try {
+      const link = document.createElement("a");
+      link.href = resultImage;
+      link.download = getDownloadFilename();
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch {
+      setErrorMessage("Could not download the result image. Please try again.");
+    }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const normalizedPrompt = prompt.trim();
+    const file = selectedFile;
+    const fileError = validateImageFile(file);
+
+    if (fileError || !file) {
+      setErrorMessage(fileError ?? "Select an image before submitting.");
+      return;
+    }
+
+    if (!normalizedPrompt) {
+      setErrorMessage("Enter edit instructions before submitting.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("image", file);
+    formData.append("prompt", normalizedPrompt);
+
+    setIsSubmitting(true);
+    setErrorMessage("");
+    setResultImage("");
+
+    try {
+      const response = await fetch("/api/process-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | ApiSuccessResponse
+        | ApiErrorResponse
+        | null;
+
+      if (!response.ok || payload?.status !== "success") {
+        const errorPayload = payload as ApiErrorResponse | null;
+        const errorCode = errorPayload?.code ? ` Error code: ${errorPayload.code}.` : "";
+        const providerMessage = errorPayload?.message ? ` ${errorPayload.message}` : "";
+        throw new Error(`Image processing failed. Please try again.${providerMessage}${errorCode}`);
+      }
+
+      setResultImage(payload.data.result_image);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Something went wrong. Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  const hasWorkspaceContent = Boolean(selectedFile || prompt || resultImage || errorMessage);
+
+  const status = isSubmitting
+    ? {
+        tone: "working",
+        label: "Processing",
+      }
+    : errorMessage
+      ? {
+          tone: "critical",
+          label: "Needs attention",
+        }
+      : resultImage
+        ? {
+            tone: "success",
+            label: "Result ready",
+          }
+        : selectedFile
+          ? {
+              tone: "ready",
+              label: "Ready to submit",
+            }
+          : {
+              tone: "idle",
+              label: "Waiting for input",
+            };
+
+  return (
+    <main className="page-shell">
+      <div className="page-inner">
+        <header className="product-header">
+          <div className="brand-block">
+            <span className="brand-mark">IA</span>
+            <div>
+              <p className="brand-name">ISBIM AI</p>
+              <p className="brand-caption">Image transformation workspace</p>
+            </div>
+          </div>
+
+          <div className={`status-pill status-${status.tone}`}>{status.label}</div>
+        </header>
+
+        <form className="workspace-stack" onSubmit={handleSubmit}>
+          <section className="panel">
+            <div className="panel-header">
+              <div>
+                <h2>Prepare your request</h2>
+                <p className="panel-copy">
+                  Upload the source image on the left, then describe the intended output on the right.
+                </p>
+              </div>
+              <span className="panel-meta">One image, up to 5 MB</span>
+            </div>
+
+            <div className="request-composer">
+              <div className="request-media-stack">
+                <label
+                  className={`upload-field${selectedFile ? " has-file" : ""}${isDragActive ? " is-drag-active" : ""}`}
+                  htmlFor="image-upload"
+                  onDragEnter={handleDragEnter}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <input
+                    ref={fileInputRef}
+                    id="image-upload"
+                    name="image"
+                    type="file"
+                    accept={ALLOWED_IMAGE_TYPES.join(",")}
+                    onChange={handleFileChange}
+                  />
+                  <div className="upload-copy">
+                    <span className="upload-title">
+                      {selectedFile ? "Replace source image" : "Drag an image here or click to upload"}
+                    </span>
+                    <span className="upload-caption">
+                      Drop a JPG, PNG, or WEBP image here, or browse from your device.
+                    </span>
+                  </div>
+
+                  <div className="upload-chip-row">
+                    <span className="meta-chip">{selectedFile ? formatFileSize(selectedFile.size) : "Max 5 MB"}</span>
+                    <span className="meta-chip">
+                      {selectedFile ? getFileTypeLabel(selectedFile) : "JPG / PNG / WEBP"}
+                    </span>
+                  </div>
+                </label>
+
+                <div className="preview-frame source-frame">
+                  {previewUrl ? (
+                    <img className="preview-image" src={previewUrl} alt="Selected source preview" />
+                  ) : (
+                    <div className="empty-state">
+                      <p className="empty-title">Source preview</p>
+                      <p className="empty-copy">
+                        Upload an image to inspect it before submitting the transformation request.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="file-summary">
+                  <div>
+                    <p className="summary-label">Selected file</p>
+                    <p className="summary-value">
+                      {selectedFile ? selectedFile.name : "No file chosen yet"}
+                    </p>
+                  </div>
+
+                  {selectedFile ? (
+                    <button
+                      className="text-button"
+                      type="button"
+                      onClick={handleRemoveFile}
+                      disabled={isSubmitting}
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="request-editor">
+                <label className="prompt-field">
+                  <span className="field-label">Prompt</span>
+                  <textarea
+                    name="prompt"
+                    value={prompt}
+                    onChange={handlePromptChange}
+                    placeholder="Example: Preserve the main structure, refine the composition, and generate a cleaner modern version with clearer visual hierarchy."
+                    rows={10}
+                  />
+                </label>
+
+                <div className="action-row">
+                  <button className="submit-button" type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? "Processing..." : "Generate result"}
+                  </button>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={handleResetWorkspace}
+                    disabled={!hasWorkspaceContent || isSubmitting}
+                  >
+                    Clear workspace
+                  </button>
+                </div>
+
+                {errorMessage || resultImage ? (
+                  <div
+                    className={`message-box ${errorMessage ? "error-box" : "success-box"}`}
+                    role={errorMessage ? "alert" : "status"}
+                    aria-live="polite"
+                  >
+                    {errorMessage
+                      ? errorMessage
+                      : "Result ready. Review it below, open it in a new tab, or download it directly."}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </section>
+
+          <section className="panel result-panel">
+            <div className="panel-header">
+              <div>
+                <h2>Review the output</h2>
+                <p className="panel-copy">
+                  Review the generated image, then open or download the final output.
+                </p>
+              </div>
+              <span className="panel-meta">
+                {resultImage ? "Result available" : isSubmitting ? "In progress" : "Awaiting submission"}
+              </span>
+            </div>
+
+            {isSubmitting ? (
+              <div className="loading-card" aria-live="polite">
+                <span className="spinner" />
+                <div>
+                  <p className="loading-title">Processing your image</p>
+                  <p className="loading-copy">
+                    The image and prompt are being submitted. The result will appear here as soon
+                    as the API responds.
+                  </p>
+                </div>
+              </div>
+            ) : resultImage ? (
+              <div className="result-stack">
+                <div className="result-frame">
+                  <img className="result-image" src={resultImage} alt="Processed image result" />
+                </div>
+
+                <div className="result-actions">
+                  <a
+                    className="submit-button link-button"
+                    href={resultImage}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open result
+                  </a>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={handleDownloadResult}
+                  >
+                    Download image
+                  </button>
+                </div>
+
+                <div className="result-summary-card">
+                  <div>
+                    <p className="summary-label">Delivery format</p>
+                    <p className="summary-value">
+                      {resultImage.startsWith("data:image/")
+                        ? "Inline image returned from the provider"
+                        : "Remote image link returned from the provider"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="summary-label">Suggested file name</p>
+                    <p className="summary-value">{getDownloadFilename()}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="result-placeholder">
+                <p className="empty-title">
+                  {previewUrl ? "Ready to process" : "Your result will appear here"}
+                </p>
+                <p className="empty-copy">
+                  {previewUrl
+                    ? "Your source image is loaded. Submit the request when the instructions are ready."
+                    : "Upload an image and enter instructions to generate a processed version."}
+                </p>
+              </div>
+            )}
+
+            <div className="info-list">
+              <div className="info-item">
+                <span className="info-label">Input requirements</span>
+                <span className="info-value">1 image, up to 5 MB</span>
+              </div>
+              <div className="info-item">
+                <span className="info-label">Accepted formats</span>
+                <span className="info-value">JPG, PNG, WEBP</span>
+              </div>
+              <div className="info-item">
+                <span className="info-label">Delivery</span>
+                <span className="info-value">Preview + open + download</span>
+              </div>
+            </div>
+          </section>
+        </form>
+      </div>
+    </main>
+  );
+}
