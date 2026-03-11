@@ -24,8 +24,27 @@ class InvalidInputError(AppError):
         super().__init__(message=message, code=code, status_code=status.HTTP_400_BAD_REQUEST)
 
 
+class AuthenticationError(AppError):
+    def __init__(
+        self,
+        message: str = "Sign in first.",
+        code: str = "AUTH_REQUIRED",
+        status_code: int = status.HTTP_401_UNAUTHORIZED,
+    ) -> None:
+        super().__init__(message=message, code=code, status_code=status_code)
+
+
+class UsageLimitError(AppError):
+    def __init__(self, message: str = "The guest account has reached the 100-image generation limit.") -> None:
+        super().__init__(
+            message=message,
+            code="GUEST_USAGE_LIMIT_REACHED",
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
+
 class ProviderTimeoutError(AppError):
-    def __init__(self, message: str = "第三方服務逾時，請稍後再試。") -> None:
+    def __init__(self, message: str = "The upstream service timed out. Please try again later.") -> None:
         super().__init__(
             message=message,
             code="PROVIDER_TIMEOUT",
@@ -34,7 +53,7 @@ class ProviderTimeoutError(AppError):
 
 
 class ProviderResponseError(AppError):
-    def __init__(self, message: str = "圖片處理服務回應異常。") -> None:
+    def __init__(self, message: str = "The image processing service returned an unexpected response.") -> None:
         super().__init__(
             message=message,
             code="PROVIDER_ERROR",
@@ -52,7 +71,7 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def handle_validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
-        message = "請確認圖片與 prompt 欄位都已正確提供。"
+        message = "Make sure both the image and prompt fields are provided correctly."
         if exc.errors():
             message = exc.errors()[0].get("msg", message)
         return JSONResponse(
@@ -66,8 +85,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content=ErrorResponse(
-                message="伺服器發生未預期錯誤，請稍後再試。",
+                message="The server encountered an unexpected error. Please try again later.",
                 code="INTERNAL_ERROR",
             ).model_dump(),
         )
-

@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { SESSION_COOKIE_NAME } from "@/lib/auth";
 
 const API_BASE_URL =
   (process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8001").replace(
@@ -19,6 +20,7 @@ export const runtime = "nodejs";
 
 type UpstreamErrorPayload = {
   code?: unknown;
+  data?: unknown;
   detail?: unknown;
   error?: unknown;
   message?: unknown;
@@ -92,6 +94,11 @@ function getUserFacingErrorMessage(
       return "The selected image must be smaller than 5 MB.";
     case "INVALID_INPUT":
       return "Check the image and instructions, then try again.";
+    case "AUTH_REQUIRED":
+    case "INVALID_SESSION":
+      return "Please sign in again before generating images.";
+    case "GUEST_USAGE_LIMIT_REACHED":
+      return "Guest account has reached the 100-image limit.";
     case "PROVIDER_TIMEOUT":
       return "The request is taking longer than expected. Please try again.";
     case "BACKEND_UNAVAILABLE":
@@ -107,13 +114,29 @@ function getUserFacingErrorMessage(
   return "Could not generate the result. Please try again.";
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const sessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+
+  if (!sessionToken) {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Please sign in before generating images.",
+        code: "AUTH_REQUIRED",
+      },
+      { status: 401 },
+    );
+  }
+
   try {
     const formData = await request.formData();
     const upstreamResponse = await fetch(`${API_BASE_URL}/api/process-image`, {
       method: "POST",
       body: formData,
       cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${sessionToken}`,
+      },
     });
     const rawBody = await upstreamResponse.text();
 

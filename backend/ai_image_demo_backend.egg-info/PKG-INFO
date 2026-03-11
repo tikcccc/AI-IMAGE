@@ -6,6 +6,7 @@ Requires-Python: >=3.12
 Requires-Dist: fastapi<1.0.0,>=0.115.0
 Requires-Dist: httpx<1.0.0,>=0.28.0
 Requires-Dist: pydantic-settings<3.0.0,>=2.6.0
+Requires-Dist: psycopg[binary]<4.0.0,>=3.2.0
 Requires-Dist: python-multipart<1.0.0,>=0.0.12
 Requires-Dist: uvicorn[standard]<1.0.0,>=0.32.0
 Provides-Extra: dev

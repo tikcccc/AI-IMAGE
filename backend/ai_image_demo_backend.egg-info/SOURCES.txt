@@ -5,6 +5,7 @@ ai_image_demo_backend.egg-info/dependency_links.txt
 ai_image_demo_backend.egg-info/requires.txt
 ai_image_demo_backend.egg-info/top_level.txt
 app/__init__.py
+app/auth.py
 app/dependencies.py
 app/errors.py
 app/factory.py
@@ -12,8 +13,10 @@ app/main.py
 app/schemas.py
 app/settings.py
 app/routers/__init__.py
+app/routers/account.py
 app/routers/process_image.py
 app/services/__init__.py
 app/services/provider.py
+app/services/usage_store.py
 tests/test_process_image.py
 tests/test_settings.py

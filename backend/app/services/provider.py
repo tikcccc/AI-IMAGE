@@ -30,19 +30,19 @@ class VectorEngineAdapter:
             raise ProviderTimeoutError() from exc
         except httpx.HTTPStatusError as exc:
             raise ProviderResponseError(
-                f"中轉站處理失敗：{self._extract_provider_error(exc.response)}"
+                f"Upstream processing failed: {self._extract_provider_error(exc.response)}"
             ) from exc
         except httpx.HTTPError as exc:
-            raise ProviderResponseError("無法連線到圖片處理服務。") from exc
+            raise ProviderResponseError("Could not connect to the image processing service.") from exc
 
         try:
             response_data = response.json()
         except ValueError as exc:
-            raise ProviderResponseError("中轉站回傳了無法解析的 JSON。") from exc
+            raise ProviderResponseError("The upstream service returned invalid JSON.") from exc
 
         result_image = self.extract_result_image(response_data)
         if not result_image:
-            raise ProviderResponseError("中轉站回應中找不到可用的圖片結果。")
+            raise ProviderResponseError("No usable image result was found in the upstream response.")
         return result_image
 
     async def _post(self, payload: dict[str, Any]) -> httpx.Response:
@@ -187,4 +187,3 @@ class VectorEngineAdapter:
             return str(payload.get("message") or payload.get("detail") or response.status_code)
 
         return str(payload)
-
