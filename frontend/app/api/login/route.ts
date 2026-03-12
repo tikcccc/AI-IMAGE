@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       status: "success",
       data: {
-        redirect_url: new URL("/ai-image", request.nextUrl.origin).toString(),
+        redirect_url: "/ai-image",
       },
     });
 

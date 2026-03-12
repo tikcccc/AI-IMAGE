@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   const response = NextResponse.json({
     status: "success",
     data: {
-      redirect_url: new URL("/login", request.nextUrl.origin).toString(),
+      redirect_url: "/login",
     },
   });
 
